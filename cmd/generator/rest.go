@@ -77,22 +77,24 @@ func extractRestApi(rootSec *section, source []byte) []Endpoint {
 			retSec = sec
 		}
 	}
-	if requestSec == nil && paramSec == nil {
+	if requestSec == nil {
 		ret := []Endpoint{}
 		for _, sub := range rootSec.subSections {
 			ret = append(ret, extractRestApi(sub, source)...)
 		}
 		return ret
-	} else if requestSec != nil && paramSec != nil {
+	} else {
 		endpoint := procRequest(requestSec, source)
 		if endpoint == nil {
 			return nil
 		}
-		param := procParam(paramSec, source)
-		if param == nil {
-			return nil
+		if paramSec != nil {
+			param := procParam(paramSec, source)
+			if param == nil {
+				return nil
+			}
+			endpoint.Param = append(endpoint.Param, param...)
 		}
-		endpoint.Param = append(endpoint.Param, param...)
 		if retSec != nil {
 			retType := procReturnValue(retSec, source)
 			endpoint.RetType = retType

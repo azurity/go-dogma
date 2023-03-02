@@ -36,6 +36,10 @@ func typedParse[T any](data []byte) (*T, error) {
 	return ret, nil
 }
 
+type ResultBase struct {
+	Message string `json:"message"`
+}
+
 func HandleRestFunc[T func(PU, PC) (R, error), PU any, PC any, R any](s *Server, handle T) {
 	typ := reflect.TypeOf(new(T))
 	desc, ok := s.desc[typ]
@@ -69,10 +73,14 @@ func HandleRestFunc[T func(PU, PC) (R, error), PU any, PC any, R any](s *Server,
 			return
 		}
 		ret, err := handle(*urlParam, *commonParam)
+		result := struct {
+			ResultBase
+			R
+		}{}
 		if err != nil {
-			// TODO:
-			writer.WriteHeader(http.StatusBadRequest)
-			return
+			result.Message = err.Error()
+		} else {
+			result.R = ret
 		}
 		raw, err := json.Marshal(ret)
 		if err != nil {
