@@ -15,14 +15,16 @@ type GolangConfig struct {
 }
 
 func formatName(name string) string {
-	snake := strings.ReplaceAll(name, "-", "_")
-	if snake == "" {
-		return snake
+	parts := strings.Split(name, "-")
+	for i, part := range parts {
+		if part != "" {
+			parts[i] = strings.ToUpper(part[:1]) + part[1:]
+		}
 	}
-	return strings.ToUpper(snake[:1]) + snake[1:]
+	return strings.Join(parts, "")
 }
 
-func formatType(name string) string {
+func formatType(name string, packName string) string {
 	if name == "null" {
 		return "*Null"
 	} else if name == "boolean" {
@@ -34,13 +36,25 @@ func formatType(name string) string {
 	} else if name == "string" {
 		return "string"
 	} else {
-		return formatName(name)
+		return packName + "." + formatName(name)
 	}
+}
+
+func makeEndpointName(endpoint *Endpoint) string {
+	return endpoint.Title
+	//ret := formatName(endpoint.Name[len(endpoint.Name)-1])
+	//for _, item := range endpoint.Param {
+	//	if item.Role == ParamRoleURL {
+	//		ret += formatName(item.Name)
+	//	}
+	//}
+	//ret += endpoint.Method
+	//return ret
 }
 
 func RenderGolang(endpoints []Endpoint, types map[string]string, config *GolangConfig) error {
 	for _, endpoint := range endpoints {
-		endpointName := formatName(endpoint.Name[len(endpoint.Name)-1]) + endpoint.Method
+		endpointName := makeEndpointName(&endpoint)
 		if endpoint.RetType != "" && endpoint.RetType[0] == '{' {
 			types[endpointName+"Ret"] = endpoint.RetType
 		}
@@ -88,7 +102,7 @@ func RenderGolang(endpoints []Endpoint, types map[string]string, config *GolangC
 		packages[strings.Join(endpoint.Name[:len(endpoint.Name)-1], "/")] = true
 		packageName := endpoint.Name[len(endpoint.Name)-2]
 		fileName := packageName + ".go"
-		endpointName := formatName(endpoint.Name[len(endpoint.Name)-1]) + endpoint.Method
+		endpointName := makeEndpointName(&endpoint)
 
 		os.MkdirAll(folderName, 0777)
 		if _, err := os.Stat(filepath.Join(folderName, fileName)); os.IsNotExist(err) {
@@ -103,7 +117,7 @@ func RenderGolang(endpoints []Endpoint, types map[string]string, config *GolangC
 		codeFile.Write([]byte(fmt.Sprintf("type %sURLParam struct{\n", endpointName)))
 		for _, item := range endpoint.Param {
 			if item.Role == ParamRoleURL {
-				codeFile.Write([]byte(fmt.Sprintf("\t%s %s `json:\"%s\"`\n", formatName(item.Name), formatType(item.Type), item.Name)))
+				codeFile.Write([]byte(fmt.Sprintf("\t%s %s `json:\"%s\"`\n", formatName(item.Name), formatType(item.Type, globalPackage), item.Name)))
 			}
 		}
 		codeFile.Write([]byte("}\n\n"))
@@ -111,7 +125,7 @@ func RenderGolang(endpoints []Endpoint, types map[string]string, config *GolangC
 		codeFile.Write([]byte(fmt.Sprintf("type %sCommonParam struct{\n", endpointName)))
 		for _, item := range endpoint.Param {
 			if item.Role == ParamRoleCommon {
-				codeFile.Write([]byte(fmt.Sprintf("\t%s %s `json:\"%s\"`\n", formatName(item.Name), formatType(item.Type), item.Name)))
+				codeFile.Write([]byte(fmt.Sprintf("\t%s %s `json:\"%s\"`\n", formatName(item.Name), formatType(item.Type, globalPackage), item.Name)))
 			}
 		}
 		codeFile.Write([]byte("}\n\n"))
@@ -130,17 +144,33 @@ func RenderGolang(endpoints []Endpoint, types map[string]string, config *GolangC
 
 	descFile, _ := os.OpenFile(filepath.Join(config.Path, "desc.go"), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 
-	descFile.Write([]byte(fmt.Sprintf("package %s\n\nimport (\n\t\"reflect\"\n\t\"github.com/azurity/go-dogma\"\n\n", globalPackage)))
+	descFile.Write([]byte(fmt.Sprintf("package %s\n\nimport (\n\t\"github.com/azurity/go-dogma\"\n\t\"reflect\"\n\n", globalPackage)))
 	for name, _ := range packages {
-		rename := strings.Join(strings.Split(name, "/"), "_")
+		renamePart := strings.Split(name, "/")
+		if len(renamePart) == 1 {
+			descFile.Write([]byte(fmt.Sprintf("\t\"%s/%s\"\n", config.Package, name)))
+			continue
+		}
+		for i, item := range renamePart {
+			if i != 0 {
+				renamePart[i] = formatName(item)
+			}
+		}
+		rename := strings.Join(renamePart, "")
 		descFile.Write([]byte(fmt.Sprintf("\t%s \"%s/%s\"\n", rename, config.Package, name)))
 	}
 	descFile.Write([]byte(")\n\n"))
 
-	descFile.Write([]byte("var desc = map[reflect.Type]dogma.Method{\n"))
+	descFile.Write([]byte("var Desc = map[reflect.Type]dogma.Method{\n"))
 	for _, endpoint := range endpoints {
-		packRename := strings.Join(endpoint.Name[:len(endpoint.Name)-1], "_")
-		endpointName := formatName(endpoint.Name[len(endpoint.Name)-1]) + endpoint.Method
+		renamePart := append([]string{}, endpoint.Name[:len(endpoint.Name)-1]...)
+		for i, item := range renamePart {
+			if i != 0 {
+				renamePart[i] = formatName(item)
+			}
+		}
+		packRename := strings.Join(renamePart, "")
+		endpointName := makeEndpointName(&endpoint)
 		pathPart := append([]string{}, endpoint.Name...)
 
 		for _, item := range endpoint.Param {

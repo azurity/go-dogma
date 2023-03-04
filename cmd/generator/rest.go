@@ -56,6 +56,9 @@ func procRequest(sec *section, source []byte) *Endpoint {
 }
 
 func extractRestApi(rootSec *section, source []byte) []Endpoint {
+	if rootSec.notApi {
+		return nil
+	}
 	var requestSec *section
 	var paramSec *section
 	for _, sec := range rootSec.subSections {
@@ -91,6 +94,7 @@ func extractRestApi(rootSec *section, source []byte) []Endpoint {
 		}
 		retType := procReturnValue(rootSec, source)
 		endpoint.RetType = retType
+		endpoint.Title = formatTitle(string(rootSec.node.Text(source)))
 		return []Endpoint{*endpoint}
 	}
 	return nil

@@ -13,6 +13,7 @@ type section struct {
 	subSections []*section
 	node        *ast.Heading
 	name        string
+	notApi      bool
 }
 
 func createSection(root *ast.Document, source []byte) *section {
@@ -20,6 +21,16 @@ func createSection(root *ast.Document, source []byte) *section {
 		subSections: []*section{},
 	}, nil, nil, nil, nil, nil, nil}
 	for n := root.FirstChild(); n != nil; n = n.NextSibling() {
+		if n.Kind() == ast.KindRawHTML {
+			if string(n.(*ast.RawHTML).Text(source)) == "<!--not common api-->" {
+				for i := 6; i > 0; i -= 1 {
+					if lastSection[i] != nil {
+						lastSection[i].notApi = true
+						break
+					}
+				}
+			}
+		}
 		if n.Kind() == ast.KindHeading {
 			cased := n.(*ast.Heading)
 			level := cased.Level

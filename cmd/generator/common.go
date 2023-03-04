@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"fmt"
 	"github.com/yuin/goldmark/ast"
 	east "github.com/yuin/goldmark/extension/ast"
 	"strings"
@@ -19,6 +20,7 @@ type Param struct {
 
 type Endpoint struct {
 	Name    []string
+	Title   string
 	Method  string
 	Param   []Param
 	RetType string
@@ -57,17 +59,20 @@ func parseTable(node *east.Table, doc []byte) (Header, []map[string]string) {
 	return headers, ret
 }
 
-func procParam(sec *section, source []byte) []Param {
-	var table *east.Table
-	for n := sec.node.NextSibling(); n != nil; n = n.NextSibling() {
+func findFirstTable(node ast.Node) *east.Table {
+	for n := node.NextSibling(); n != nil; n = n.NextSibling() {
 		if n.Kind() == ast.KindHeading {
 			break
 		}
 		if n.Kind() == east.KindTable {
-			table = n.(*east.Table)
-			break
+			return n.(*east.Table)
 		}
 	}
+	return nil
+}
+
+func procParam(sec *section, source []byte) []Param {
+	table := findFirstTable(sec.node)
 	if table == nil {
 		return []Param{}
 	}
@@ -117,14 +122,18 @@ func procReturnValue(sec *section, source []byte) string {
 		if n.Kind() == ast.KindHeading {
 			break
 		}
-		if n.Kind() == ast.KindFencedCodeBlock && string(n.(*ast.FencedCodeBlock).Info.Text(source)) == "json--schema" {
-			lines := n.Lines()
-			result := ""
-			for i := 0; i < lines.Len(); i += 1 {
-				item := lines.At(i)
-				result += strings.TrimSpace(string(item.Value(source)))
+		if n.Kind() == ast.KindFencedCodeBlock {
+			if n.(*ast.FencedCodeBlock).Info != nil {
+				if string(n.(*ast.FencedCodeBlock).Info.Text(source)) == "json--schema" {
+					lines := n.Lines()
+					result := ""
+					for i := 0; i < lines.Len(); i += 1 {
+						item := lines.At(i)
+						result += strings.TrimSpace(string(item.Value(source)))
+					}
+					return result
+				}
 			}
-			return result
 		}
 		if n.Kind() == ast.KindParagraph {
 			code := findFirstCode(n.(*ast.Paragraph))
@@ -136,17 +145,19 @@ func procReturnValue(sec *section, source []byte) string {
 	return ""
 }
 
+func formatTitle(name string) string {
+	parts := strings.Split(name, " ")
+	for i, part := range parts {
+		if part != "" {
+			parts[i] = strings.ToUpper(part[:1]) + part[1:]
+		}
+	}
+	return strings.Join(parts, "")
+}
+
 func extractTypes(sec *section, source []byte) map[string]string {
 	ret := map[string]string{}
-	if sec.name != "Types" {
-		for _, sub := range sec.subSections {
-			subRet := extractTypes(sub, source)
-			for name, definition := range subRet {
-				// TODO: uni name check
-				ret[name] = definition
-			}
-		}
-	} else {
+	if sec.name == "Types" {
 		for _, sub := range sec.subSections {
 			code := findFirstCodeBlock(sub.node.NextSibling())
 			if code != nil {
@@ -156,7 +167,39 @@ func extractTypes(sec *section, source []byte) map[string]string {
 					item := lines.At(i)
 					result += strings.TrimSpace(string(item.Value(source)))
 				}
-				ret[sub.name] = result
+				ret[formatTitle(sub.name)] = result
+			}
+		}
+	} else if sec.name == "Enums" {
+		for _, sub := range sec.subSections {
+			table := findFirstTable(sub.node)
+			if table == nil {
+				continue
+			}
+			header, body := parseTable(table, source)
+			if header.Contains("Value") && header.Contains("Description") {
+				enumType := "{ \"type\": \"string\", \"enum\": ["
+				first := true
+				for _, row := range body {
+					if row["Value"] == "" {
+						continue
+					}
+					if !first {
+						enumType += ", "
+					}
+					first = false
+					enumType += fmt.Sprintf("\"%s\"", row["Value"])
+				}
+				enumType += "]}"
+				ret[formatTitle(sub.name)] = enumType
+			}
+		}
+	} else {
+		for _, sub := range sec.subSections {
+			subRet := extractTypes(sub, source)
+			for name, definition := range subRet {
+				// TODO: uni name check
+				ret[name] = definition
 			}
 		}
 	}
