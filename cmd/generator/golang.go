@@ -6,6 +6,7 @@ import (
 	"github.com/azurity/schema2code"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -150,7 +151,14 @@ func RenderGolang(endpoints []Endpoint, types map[string]string, config *GolangC
 	descFile.Write(goFileGenerateLine)
 
 	descFile.Write([]byte(fmt.Sprintf("package %s\n\nimport (\n\t\"github.com/azurity/go-dogma\"\n\t\"reflect\"\n\n", globalPackage)))
+
+	sortedPack := []string{}
 	for name, _ := range packages {
+		sortedPack = append(sortedPack, name)
+	}
+	sort.Strings(sortedPack)
+
+	for _, name := range sortedPack {
 		renamePart := strings.Split(name, "/")
 		if len(renamePart) == 1 {
 			descFile.Write([]byte(fmt.Sprintf("\t\"%s/%s\"\n", config.Package, name)))
