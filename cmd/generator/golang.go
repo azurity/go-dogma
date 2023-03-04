@@ -118,11 +118,11 @@ func RenderGolang(endpoints []Endpoint, types map[string]string, config *GolangC
 
 		//codeFile.Write([]byte(fmt.Sprintf("type %sParam struct{\n\t%sURLParam\n\t%sCommonParam\n}\n\n", endpointName, endpointName, endpointName)))
 
-		retType := formatName(endpoint.RetType)
-		if retType == "" {
+		retType := "*" + globalPackage + "." + formatName(endpoint.RetType)
+		if endpoint.RetType == "" {
 			retType = "*struct{}"
 		} else if endpoint.RetType[0] == '{' {
-			retType = globalPackage + "." + endpointName + "Ret"
+			retType = "*" + globalPackage + "." + endpointName + "Ret"
 		}
 		codeFile.Write([]byte(fmt.Sprintf("type %s = func(urlParam %sURLParam, commonParam %sCommonParam) (%s, error)\n\n", endpointName, endpointName, endpointName, retType)))
 		codeFile.Close()

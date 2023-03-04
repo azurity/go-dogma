@@ -58,7 +58,6 @@ func procRequest(sec *section, source []byte) *Endpoint {
 func extractRestApi(rootSec *section, source []byte) []Endpoint {
 	var requestSec *section
 	var paramSec *section
-	var retSec *section // optional
 	for _, sec := range rootSec.subSections {
 		if sec.name == "HTTP Request" {
 			if requestSec != nil {
@@ -70,11 +69,6 @@ func extractRestApi(rootSec *section, source []byte) []Endpoint {
 				return nil
 			}
 			paramSec = sec
-		} else if sec.name == "Return Value" {
-			if retSec != nil {
-				return nil
-			}
-			retSec = sec
 		}
 	}
 	if requestSec == nil {
@@ -95,10 +89,8 @@ func extractRestApi(rootSec *section, source []byte) []Endpoint {
 			}
 			endpoint.Param = append(endpoint.Param, param...)
 		}
-		if retSec != nil {
-			retType := procReturnValue(retSec, source)
-			endpoint.RetType = retType
-		}
+		retType := procReturnValue(rootSec, source)
+		endpoint.RetType = retType
 		return []Endpoint{*endpoint}
 	}
 	return nil

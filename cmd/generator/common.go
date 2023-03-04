@@ -117,7 +117,7 @@ func procReturnValue(sec *section, source []byte) string {
 		if n.Kind() == ast.KindHeading {
 			break
 		}
-		if n.Kind() == ast.KindFencedCodeBlock {
+		if n.Kind() == ast.KindFencedCodeBlock && string(n.(*ast.FencedCodeBlock).Info.Text(source)) == "json--schema" {
 			lines := n.Lines()
 			result := ""
 			for i := 0; i < lines.Len(); i += 1 {
