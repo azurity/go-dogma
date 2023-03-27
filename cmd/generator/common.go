@@ -205,3 +205,25 @@ func extractTypes(sec *section, source []byte) map[string]string {
 	}
 	return ret
 }
+
+func formatName(name string) string {
+	parts := strings.Split(name, "-")
+	for i, part := range parts {
+		if part != "" {
+			parts[i] = strings.ToUpper(part[:1]) + part[1:]
+		}
+	}
+	return strings.Join(parts, "")
+}
+
+func makeEndpointName(endpoint *Endpoint) string {
+	return endpoint.Title
+	//ret := formatName(endpoint.Name[len(endpoint.Name)-1])
+	//for _, item := range endpoint.Param {
+	//	if item.Role == ParamRoleURL {
+	//		ret += formatName(item.Name)
+	//	}
+	//}
+	//ret += endpoint.Method
+	//return ret
+}

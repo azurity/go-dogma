@@ -60,17 +60,20 @@ func HandleRestFunc[T func(PU, PC) (R, error), PU any, PC any, R any](s *Server,
 			writer.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		data, err := io.ReadAll(request.Body)
-		if err != nil {
-			// TODO:
-			writer.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		commonParam, err := typedParse[PC](data)
-		if err != nil {
-			// TODO:
-			writer.WriteHeader(http.StatusBadRequest)
-			return
+		commonParam := new(PC)
+		if desc.Method == http.MethodPost {
+			data, err := io.ReadAll(request.Body)
+			if err != nil {
+				// TODO:
+				writer.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			commonParam, err = typedParse[PC](data)
+			if err != nil {
+				// TODO:
+				writer.WriteHeader(http.StatusBadRequest)
+				return
+			}
 		}
 		ret, err := handle(*urlParam, *commonParam)
 		result := struct {
