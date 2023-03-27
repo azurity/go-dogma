@@ -1,0 +1,23 @@
+interface $typedFetch extends $fetch {
+    fetch<K extends keyof $TypeMap>(type: K, urlParam: Parameters<$TypeMap[K]>[0], commonParam: Parameters<$TypeMap[K]>[1], initOpt?: RequestInit): Promise<ReturnType<$TypeMap[K]> & { message: string }>;
+}
+
+class $fetch {
+    async fetch(type: string, urlParam: any, commonParam: any, initOpt?: RequestInit): Promise<any> {
+        if ($Desc[type] === undefined) throw new Error("unknown endpoint");
+        const desc = $Desc[type];
+        let init: RequestInit = {
+            method: desc.Method,
+        };
+        if (desc.Method == "POST") {
+            init.body = JSON.stringify(commonParam);
+        }
+        let res = await fetch(desc.url(urlParam), Object.assign(init, initOpt));
+        let ret = await res.json();
+    }
+}
+
+const $typedFetchInstanceType = $fetch as { new(): $typedFetch; prototype: $typedFetch };
+const $typedFetchInstance = new $typedFetchInstanceType();
+const $fetchFn = $typedFetchInstance.fetch;
+export default $fetchFn;

@@ -11,6 +11,7 @@ func main() {
 	doc := flag.String("doc", "", "document file path")
 	golangPackage := flag.String("golang-package", "", "golang package")
 	golangPath := flag.String("golang-path", "", "golang output folder")
+	typescriptPath := flag.String("typescript-path", "", "typescript output file")
 	flag.Parse()
 
 	if *doc == "" {
@@ -20,6 +21,10 @@ func main() {
 	golang := false
 	if *golangPackage != "" && *golangPath != "" {
 		golang = true
+	}
+	typescript := false
+	if *typescriptPath != "" {
+		typescript = true
 	}
 
 	if !golang {
@@ -31,6 +36,12 @@ func main() {
 
 	if golang {
 		err := generator.RenderGolang(endpoints, types, &generator.GolangConfig{Package: *golangPackage, Path: *golangPath})
+		if err != nil {
+			log.Println(err)
+		}
+	}
+	if typescript {
+		err := generator.RenderTypescript(endpoints, types, &generator.TypescriptConfig{FilePath: *typescriptPath})
 		if err != nil {
 			log.Println(err)
 		}
