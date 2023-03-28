@@ -1,5 +1,5 @@
-github.com/azurity/schema2code v0.0.0-20230327155730-e1929015f24c h1:AhbcGiUu5NVE9U6ehft4T9JlyPjbYT1iEK2MPEx1WHc=
-github.com/azurity/schema2code v0.0.0-20230327155730-e1929015f24c/go.mod h1:nLp2SwSo9AhFBBmBGsYid2Mm6q7l7nVlhmya2JKchNA=
+github.com/azurity/schema2code v0.0.0-20230328035257-b9d476e2847d h1:WH28Cq+yYwOXrPL40gfY7wtoA8I+sw856GxUCNop4I4=
+github.com/azurity/schema2code v0.0.0-20230328035257-b9d476e2847d/go.mod h1:nLp2SwSo9AhFBBmBGsYid2Mm6q7l7nVlhmya2JKchNA=
 github.com/gorilla/mux v1.8.0 h1:i40aqfkR1h2SlN9hojwV5ZA91wcXFOvkdNIeFDP5koI=
 github.com/gorilla/mux v1.8.0/go.mod h1:DVbg23sWSpFRCP0SfiEN6jmj59UnW/n46BH5rLB71So=
 github.com/yuin/goldmark v1.5.4 h1:2uY/xC0roWy8IBEGLgB1ywIoEJFGmRrX21YQcvGZzjU=

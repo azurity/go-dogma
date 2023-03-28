@@ -108,10 +108,30 @@ func RenderTypescript(endpoints []Endpoint, types map[string]string, config *Typ
 			}
 			typeFile.Write([]byte("    }\n\n"))
 
+			typeFile.Write([]byte(fmt.Sprintf("    export function %sURLParam$check(obj: %sURLParam) {\n", endpointName, endpointName)))
+			for _, item := range endpoint.Param {
+				if item.Role == ParamRoleURL {
+					if formatTypescriptType(item.Type, "types") == "types."+formatName(item.Type) {
+						typeFile.Write([]byte(fmt.Sprintf("        types.$check(\"%s\", obj[\"%s\"]);\n", formatName(item.Type), item.Name)))
+					}
+				}
+			}
+			typeFile.Write([]byte("    }\n\n"))
+
 			typeFile.Write([]byte(fmt.Sprintf("    export interface %sCommonParam {\n", endpointName)))
 			for _, item := range endpoint.Param {
 				if item.Role == ParamRoleCommon {
 					typeFile.Write([]byte(fmt.Sprintf("        \"%s\": %s;\n", item.Name, formatTypescriptType(item.Type, "types"))))
+				}
+			}
+			typeFile.Write([]byte("    }\n\n"))
+
+			typeFile.Write([]byte(fmt.Sprintf("    export function %sCommonParam$check(obj: %sCommonParam) {\n", endpointName, endpointName)))
+			for _, item := range endpoint.Param {
+				if item.Role == ParamRoleCommon {
+					if formatTypescriptType(item.Type, "types") == "types."+formatName(item.Type) {
+						typeFile.Write([]byte(fmt.Sprintf("        types.$check(\"%s\", obj[\"%s\"]);\n", formatName(item.Type), item.Name)))
+					}
 				}
 			}
 			typeFile.Write([]byte("    }\n\n"))
@@ -123,6 +143,12 @@ func RenderTypescript(endpoints []Endpoint, types map[string]string, config *Typ
 				retType = "types." + endpointName + "Ret"
 			}
 			typeFile.Write([]byte(fmt.Sprintf("    export type %s = (urlParam: %sURLParam, commonParam: %sCommonParam) => %s;\n\n", endpointName, endpointName, endpointName, retType)))
+
+			typeFile.Write([]byte(fmt.Sprintf("    export function %sRet$check(obj: %s) {", endpointName, retType)))
+			if retType != "void" {
+				typeFile.Write([]byte(fmt.Sprintf(" types.$check(\"%s\", obj); ", retType[6:])))
+			}
+			typeFile.Write([]byte("}\n\n"))
 		}
 
 		typeFile.Write([]byte("}\n\n"))
@@ -167,7 +193,11 @@ func RenderTypescript(endpoints []Endpoint, types map[string]string, config *Typ
 
 		pathTemplate := fmt.Sprintf("(param: %s.%sURLParam) => `/%s`", packName, endpointName, strings.Join(pathPart, "/"))
 
-		typeFile.Write([]byte(fmt.Sprintf("    \"%s.%s\": {Name: \"/%s\", Method: \"%s\", url: %s},\n", packName, endpointName, strings.Join(pathPart, "/"), endpoint.Method, pathTemplate)))
+		fullName := packName + "." + endpointName
+		metaData := fmt.Sprintf("{ name: \"%s\", method: \"%s\", urlFunc: %s, urlParamCheck: %sURLParam$check, commonParamCheck: %sCommonParam$check, retCheck: %sRet$check }",
+			strings.Join(pathPart, "/"), endpoint.Method, pathTemplate, fullName, fullName, fullName)
+
+		typeFile.Write([]byte(fmt.Sprintf("    \"%s.%s\": %s,\n", packName, endpointName, metaData)))
 	}
 	typeFile.Write([]byte("}\n\n"))
 	typeFile.Write(handleTs)

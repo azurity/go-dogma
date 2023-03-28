@@ -6,6 +6,8 @@ class $fetch {
     async fetch(type: string, urlParam: any, commonParam: any, initOpt?: RequestInit): Promise<any> {
         if ($Desc[type] === undefined) throw new Error("unknown endpoint");
         const desc = $Desc[type];
+        desc.urlParamCheck(urlParam);
+        desc.commonParamCheck(commonParam);
         let init: RequestInit = {
             method: desc.Method,
         };
@@ -14,6 +16,10 @@ class $fetch {
         }
         let res = await fetch(desc.url(urlParam), Object.assign(init, initOpt));
         let ret = await res.json();
+        if (ret.message === "") {
+            desc.retCheck(ret);
+        }
+        return ret;
     }
 }
 
