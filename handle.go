@@ -11,7 +11,7 @@ import (
 )
 
 type Context struct {
-	session any
+	Session any
 }
 
 type SessionManager interface {
@@ -92,9 +92,9 @@ func HandleRestFunc[T func(Context, PU, PC) (R, error), PU any, PC any, R any](s
 				writer.WriteHeader(http.StatusBadRequest)
 			}
 		}
-		ctx := Context{session: s.sessionMan.Load(writer, request)}
+		ctx := Context{Session: s.sessionMan.Load(writer, request)}
 		ret, err := handle(ctx, *urlParam, *commonParam)
-		s.sessionMan.Store(writer, request, ctx.session)
+		s.sessionMan.Store(writer, request, ctx.Session)
 		result := struct {
 			ResultBase
 			R
