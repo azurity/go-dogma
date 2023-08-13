@@ -7,6 +7,7 @@ import (
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/text"
+	"strings"
 )
 
 type section struct {
@@ -21,8 +22,14 @@ func createSection(root *ast.Document, source []byte) *section {
 		subSections: []*section{},
 	}, nil, nil, nil, nil, nil, nil}
 	for n := root.FirstChild(); n != nil; n = n.NextSibling() {
-		if n.Kind() == ast.KindRawHTML {
-			if string(n.(*ast.RawHTML).Text(source)) == "<!--not common api-->" {
+		if n.Kind() == ast.KindHTMLBlock {
+			content := ""
+			for i := 0; i < n.Lines().Len(); i++ {
+				s := n.Lines().At(i)
+				content = content + string(source[s.Start:s.Stop])
+			}
+			content = strings.TrimSpace(content)
+			if content == "<!--not common api-->" {
 				for i := 6; i > 0; i -= 1 {
 					if lastSection[i] != nil {
 						lastSection[i].notApi = true

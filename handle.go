@@ -10,20 +10,33 @@ import (
 	"reflect"
 )
 
+type Context struct {
+	session any
+}
+
+type SessionManager interface {
+	Load(writer http.ResponseWriter, request *http.Request) any
+	Store(writer http.ResponseWriter, request *http.Request, session any)
+}
+
 type Method struct {
 	Name   string `json:"name"`
 	Method string `json:"method"`
 }
 
 type Server struct {
-	router *mux.Router
-	desc   map[reflect.Type]Method
+	router     *mux.Router
+	sessionMan SessionManager
+	desc       map[reflect.Type]Method
+	logger     *log.Logger
 }
 
-func New(router *mux.Router, desc map[reflect.Type]Method) *Server {
+func New(router *mux.Router, sessionMan SessionManager, desc map[reflect.Type]Method, logger *log.Logger) *Server {
 	return &Server{
-		router: router,
-		desc:   desc,
+		router:     router,
+		sessionMan: sessionMan,
+		desc:       desc,
+		logger:     logger,
 	}
 }
 
@@ -40,7 +53,7 @@ type ResultBase struct {
 	Message string `json:"message"`
 }
 
-func HandleRestFunc[T func(PU, PC) (R, error), PU any, PC any, R any](s *Server, handle T) {
+func HandleRestFunc[T func(Context, PU, PC) (R, error), PU any, PC any, R any](s *Server, handle T) {
 	typ := reflect.TypeOf(new(T))
 	desc, ok := s.desc[typ]
 	if !ok {
@@ -50,32 +63,38 @@ func HandleRestFunc[T func(PU, PC) (R, error), PU any, PC any, R any](s *Server,
 		vars := mux.Vars(request)
 		varsRaw, err := json.Marshal(vars)
 		if err != nil {
-			// TODO:
+			if s.logger != nil {
+				s.logger.Println("[dogma]", err)
+			}
 			writer.WriteHeader(http.StatusBadRequest)
-			return
 		}
 		urlParam, err := typedParse[PU](varsRaw)
 		if err != nil {
-			// TODO:
+			if s.logger != nil {
+				s.logger.Println("[dogma]", err)
+			}
 			writer.WriteHeader(http.StatusBadRequest)
-			return
 		}
 		commonParam := new(PC)
 		if desc.Method == http.MethodPost {
 			data, err := io.ReadAll(request.Body)
 			if err != nil {
-				// TODO:
+				if s.logger != nil {
+					s.logger.Println("[dogma]", err)
+				}
 				writer.WriteHeader(http.StatusBadRequest)
-				return
 			}
 			commonParam, err = typedParse[PC](data)
 			if err != nil {
-				// TODO:
+				if s.logger != nil {
+					s.logger.Println("[dogma]", err)
+				}
 				writer.WriteHeader(http.StatusBadRequest)
-				return
 			}
 		}
-		ret, err := handle(*urlParam, *commonParam)
+		ctx := Context{session: s.sessionMan.Load(writer, request)}
+		ret, err := handle(ctx, *urlParam, *commonParam)
+		s.sessionMan.Store(writer, request, ctx.session)
 		result := struct {
 			ResultBase
 			R
@@ -87,9 +106,10 @@ func HandleRestFunc[T func(PU, PC) (R, error), PU any, PC any, R any](s *Server,
 		}
 		raw, err := json.Marshal(ret)
 		if err != nil {
-			// TODO:
+			if s.logger != nil {
+				s.logger.Println("[dogma]", err)
+			}
 			writer.WriteHeader(http.StatusBadRequest)
-			return
 		}
 		writer.Write(raw)
 	}).Methods(desc.Method)

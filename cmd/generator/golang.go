@@ -90,7 +90,7 @@ func RenderGolang(endpoints []Endpoint, types map[string]string, config *GolangC
 		if _, err := os.Stat(filepath.Join(folderName, fileName)); os.IsNotExist(err) {
 			file, _ := os.Create(filepath.Join(folderName, fileName))
 			file.Write(goFileGenerateLine)
-			file.Write([]byte(fmt.Sprintf("package %s\n\nimport \"%s\"\n\ntype Null = %s.Null\n\n", packageName, config.Package, globalPackage)))
+			file.Write([]byte(fmt.Sprintf("package %s\n\nimport (\n\t\"%s\"\n\t\"github.com/azurity/go-dogma\"\n)\n\ntype Null = %s.Null\n\n", packageName, config.Package, globalPackage)))
 			file.Close()
 		}
 
@@ -121,7 +121,7 @@ func RenderGolang(endpoints []Endpoint, types map[string]string, config *GolangC
 		} else if endpoint.RetType[0] == '{' {
 			retType = "*" + globalPackage + "." + endpointName + "Ret"
 		}
-		codeFile.Write([]byte(fmt.Sprintf("type %s = func(urlParam %sURLParam, commonParam %sCommonParam) (%s, error)\n\n", endpointName, endpointName, endpointName, retType)))
+		codeFile.Write([]byte(fmt.Sprintf("type %s = func(ctx dogma.Context, urlParam %sURLParam, commonParam %sCommonParam) (%s, error)\n\n", endpointName, endpointName, endpointName, retType)))
 		codeFile.Close()
 	}
 
