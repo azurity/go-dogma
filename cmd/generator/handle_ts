@@ -6,18 +6,29 @@ class $fetch {
     async fetch(type: string, urlParam: any, commonParam: any, initOpt?: RequestInit): Promise<any> {
         if ($Desc[type] === undefined) throw new Error("unknown endpoint");
         const desc = $Desc[type];
-        desc.urlParamCheck(urlParam);
-        desc.commonParamCheck(commonParam);
+        try {
+            desc.urlParamCheck(urlParam);
+            desc.commonParamCheck(commonParam);
+        } catch (err) {
+            throw new Error("invalid parameters");
+        }
         let init: RequestInit = {
             method: desc.Method,
         };
         if (desc.Method == "POST") {
             init.body = JSON.stringify(commonParam);
         }
-        let res = await fetch(desc.url(urlParam), Object.assign(init, initOpt));
+        let res = await fetch(desc.urlFunc(urlParam), Object.assign(init, initOpt));
+        if (res.status != 200) {
+            throw res;
+        }
         let ret = await res.json();
         if (ret.message === "") {
-            desc.retCheck(ret);
+            try {
+                desc.retCheck(ret);
+            } catch (err) {
+                throw new Error("invalid response");
+            }
         }
         return ret;
     }
